@@ -15,7 +15,7 @@ typedef struct bitio {
   uint8_t buff_len;
 } bitio_t;
 
-// 0 for little endian, 1 for big
+// 1 for little endian, 0 for big
 static inline int endianness() {
   uint8_t x = 1;
   return (int) (((char *) &x)[0]);
