@@ -5,10 +5,13 @@
 bitio_t *bopen(const char *fp, MODE mode) {
   bitio_t *b = malloc(sizeof(bitio_t));
   if (b) {
-    b->fp = fopen(fp, mode == READ ? "rb" : "wb");
-    if (!b->fp) {
-      free(b);
-      return NULL;
+    b->fp = NULL;
+    if (fp) {
+      b->fp = fopen(fp, mode == READ ? "rb" : "wb");
+      if (!b->fp) {
+        free(b);
+        return NULL;
+      }
     }
     b->buff = b->eof = 0;
     b->mode = mode;
@@ -16,6 +19,13 @@ bitio_t *bopen(const char *fp, MODE mode) {
     b->buff_ptr = mode == READ ? b->buff_max : 0;
 
   }
+  return b;
+}
+
+bitio_t *bopen_f(FILE * fp, MODE mode) {
+  bitio_t *b = bopen(NULL, mode);
+  if (b)
+    b->fp = fp;
   return b;
 }
 

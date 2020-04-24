@@ -33,6 +33,9 @@ static inline void print_bits(uint8_t bits) {
 // open a file for reading or writing
 bitio_t *bopen(const char *, MODE);
 
+// bopen with an existing stream
+bitio_t *bopen_f(FILE *, MODE);
+
 // write a bit to the file
 int bwrite(bitio_t *, int);
 
