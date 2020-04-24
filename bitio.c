@@ -30,7 +30,7 @@ bitio_t *bopen_f(FILE * fp, MODE mode) {
 }
 
 int flush(bitio_t * b) {
-  if (b->buff_ptr == 0)
+  if (b->mode != WRITE || b->buff_ptr == 0)
     return 0;
 
   int status = fwrite(&(b->buff), 1, 1, b->fp);
@@ -44,6 +44,8 @@ int flush(bitio_t * b) {
 }
 
 int bwrite(bitio_t * b, int bit) {
+  if (b->mode != WRITE)
+    return 0;
   if (b->buff_ptr == b->buff_max)
     flush(b);
 
@@ -53,6 +55,9 @@ int bwrite(bitio_t * b, int bit) {
 
 int bread(bitio_t * b) {
   unsigned char pad_len[2];
+
+  if (b->mode != READ)
+    return 0;
 
   if (b->buff_ptr == b->buff_max) {
     if (b->eof)
