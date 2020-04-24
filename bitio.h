@@ -11,14 +11,23 @@ typedef enum Mode { READ, WRITE } MODE;
 
 typedef struct bitio {
   FILE *fp;
+  MODE mode;
   uint8_t buff;
-  uint8_t buff_len;
+  uint8_t buff_ptr;
+  uint8_t buff_max;
+  int eof:1;
 } bitio_t;
 
 // 1 for little endian, 0 for big
 static inline int endianness() {
   uint8_t x = 1;
   return (int) (((char *) &x)[0]);
+}
+
+static inline void print_bits(uint8_t bits) {
+  for (int i = 7; i >= 0; --i)
+    printf("%d", (bits >> i) & 1);
+  printf(" ");
 }
 
 // open a file for reading or writing

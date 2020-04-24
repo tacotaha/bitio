@@ -10,55 +10,77 @@ bitio_t *bopen(const char *fp, MODE mode) {
       free(b);
       return NULL;
     }
-    b->buff = b->buff_len = 0;
+    b->buff = b->eof = 0;
+    b->mode = mode;
+    b->buff_max = BUF_MAX;
+    b->buff_ptr = mode == READ ? b->buff_max : 0;
+
   }
   return b;
 }
 
 int flush(bitio_t * b) {
-  if (b->buff_len == 0)
+  if (b->buff_ptr == 0)
     return 0;
 
   int status = fwrite(&(b->buff), 1, 1, b->fp);
   if (!status) {
-    perror("Failed writing to file\n");
+    perror("flush");
     exit(status);
   }
-  b->buff = b->buff_len = 0;
+  b->buff = b->buff_ptr = 0;
+  b->buff_max = BUF_MAX;
   return status;
 }
 
 int bwrite(bitio_t * b, int bit) {
-  if (b->buff_len == BUF_MAX)
+  if (b->buff_ptr == b->buff_max)
     flush(b);
 
-  b->buff |= ((bit & 1) << b->buff_len++);
-
-  return 0;
+  b->buff |= ((bit & 1) << b->buff_ptr++);
+  return 1;
 }
 
 int bread(bitio_t * b) {
-  uint8_t sf;
+  unsigned char pad_len[2];
 
-  // buffer empty -> fill it
-  if (b->buff_len == 0) {
-    if (feof(b->fp))
+  if (b->buff_ptr == b->buff_max) {
+    if (b->eof)
       return BEOF;
+
+    // read actual data
     fread(&b->buff, 1, 1, b->fp);
-    b->buff_len = BUF_MAX;
+
+    // try reading the pad length + an extra byte
+    fread(pad_len, 1, 2, b->fp);
+
+    // it actually was the pad length
+    if (feof(b->fp)) {
+      b->eof = 1;
+      b->buff_max -= pad_len[0];
+    }
+    // false alarm, put them back
+    else {
+      ungetc(pad_len[1], b->fp);
+      ungetc(pad_len[0], b->fp);
+    }
+
+    b->buff_ptr = 0;
   }
 
-  --b->buff_len;
-
-  // read in reverse if little endian
-  sf = endianness()? BUF_MAX - b->buff_len - 1 : b->buff_len;
-
-  return (b->buff & (1 << sf)) >> sf;
+  return (b->buff >> b->buff_ptr++) & 1;
 }
 
 void bclose(bitio_t * b) {
   if (b) {
-    flush(b);
+    if (b->mode == WRITE) {
+      uint8_t pad_len;
+      pad_len = b->buff_max - b->buff_ptr;
+      flush(b);
+
+      // last byte of file is pad length 
+      fwrite(&pad_len, 1, 1, b->fp);
+    }
     fclose(b->fp);
     free(b);
   }
